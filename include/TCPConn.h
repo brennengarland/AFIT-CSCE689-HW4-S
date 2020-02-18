@@ -16,7 +16,7 @@ public:
    ~TCPConn();
 
    // The current status of the connection
-   enum statustype { s_none, s_connecting, s_connected, s_datatx, s_datarx, s_waitack, s_hasdata };
+   enum statustype { s_none, s_connecting, s_connected, s_datatx, s_datarx, s_waitack, s_hasdata, s_chall };
 
    statustype getStatus() { return _status; };
 
@@ -72,6 +72,7 @@ protected:
    // Functions to execute various stages of a connection 
    void sendSID();
    void waitForSID();
+   void waitForChall();
    void transmitData();
    void waitForData();
    void awaitAck();
@@ -112,6 +113,7 @@ private:
 
    CryptoPP::SecByteBlock &_aes_key; // Read from a file, our shared key
    std::string _authstr;   // remembers the random authorization string sent
+   unsigned int _auth_len = 10;
 
    unsigned int _verbosity;
 

@@ -13,6 +13,7 @@
 #include <crypto++/rijndael.h>
 #include <crypto++/gcm.h>
 #include <crypto++/aes.h>
+#include <random>
 
 using namespace CryptoPP;
 
@@ -180,6 +181,11 @@ void TCPConn::handleConnection() {
          case s_connected:
             waitForSID();
             break;
+
+         // Server: Wait for encrypted challenge
+         case s_chall:
+            waitForChall();
+            break;
    
          // Client: connecting user - replicate data
          case s_datatx:
@@ -226,6 +232,28 @@ void TCPConn::sendSID() {
    _status = s_datatx; 
 }
 
+void TCPConn::waitForChall() {
+
+   // If data on the socket, should be our Auth string from our host server
+   if (_connfd.hasData()) {
+      std::vector<uint8_t> buf;
+
+      if (!getEncryptedData(buf))
+         return;
+
+      if (!getCmdData(buf, c_sid, c_endsid)) {
+         std::stringstream msg;
+         msg << "SID string from connecting client invalid format. Cannot authenticate.";
+         _server_log.writeLog(msg.str().c_str());
+         disconnect();
+         return;
+      }
+
+      if()
+   }
+}
+
+
 /**********************************************************************************************
  * waitForSID()  - receives the SID and sends our SID
  *
@@ -257,7 +285,25 @@ void TCPConn::waitForSID() {
       wrapCmd(buf, c_sid, c_endsid);
       sendData(buf);
 
-      _status = s_datarx;
+
+      // Seed with a random value
+      std::random_device r;
+
+      // Choose a random mean between 0 and 255 (byte constraints)
+      std::default_random_engine eng(r());
+      std::uniform_int_distribution<uint8_t> dist(0, 255);
+      for(unsigned int i = 0; i < _auth_len; _auth_len++) {
+         _authstr[i] = dist(eng);
+      }
+
+      std::cout << "\nAuthorization Str: " <<  _authstr << "\n";
+
+      // Send random string
+      buf.assign(_authstr.begin(), _authstr.end());
+      wrapCmd(buf, c_sid, c_endsid);
+      sendData(buf);
+
+      _status = s_chall;
    }
 }
 
