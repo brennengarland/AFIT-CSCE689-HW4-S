@@ -14,6 +14,7 @@
 #include <crypto++/gcm.h>
 #include <crypto++/aes.h>
 #include <random>
+#include "strfuncts.h"
 
 using namespace CryptoPP;
 
@@ -177,16 +178,28 @@ void TCPConn::handleConnection() {
             sendSID();
             break;
 
+         case s_ctxChall:
+            ctxChall();
+            break;
+
+         case s_crxChall:
+            crxChall();
+            break;
+
          // Server: Wait for the SID from a newly-connected client, then send our SID
          case s_connected:
             waitForSID();
             break;
 
          // Server: Wait for encrypted challenge
-         case s_chall:
-            waitForChall();
+         case s_stxChall:
+            stxChall();
             break;
-   
+
+         case s_srxChall:
+            srxChall();
+            break;
+
          // Client: connecting user - replicate data
          case s_datatx:
             transmitData();
@@ -229,10 +242,77 @@ void TCPConn::sendSID() {
    wrapCmd(buf, c_sid, c_endsid);
    sendData(buf);
 
-   _status = s_datatx; 
+   _status = s_crxChall; 
 }
 
-void TCPConn::waitForChall() {
+
+void TCPConn::ctxChall() {
+
+   if (_connfd.hasData()) {
+      std::vector<uint8_t> buf;
+
+      if (!getEncryptedData(buf))
+         return;
+
+      if (!getCmdData(buf, c_sid, c_endsid)) {
+         std::stringstream msg;
+         msg << "SID string from connecting client invalid format. Cannot authenticate.";
+         _server_log.writeLog(msg.str().c_str());
+         disconnect();
+         return;
+      }
+
+      std::vector<uint8_t> auth;
+      auth.assign(_authstr.begin(), _authstr.end());
+      if(auth != buf) {   
+         std::stringstream msg;
+         msg << "Client challenge string incorrectly encrypted. Cannot authenticate.";
+         _server_log.writeLog(msg.str().c_str());
+         disconnect();
+         return;
+      }
+
+      std::cout << "Data correctly encrypted!";
+
+   _status = s_srxChall;
+
+   }
+
+}
+void TCPConn::crxChall() {
+   if (_connfd.hasData()) {
+      std::vector<uint8_t> buf;
+
+      if (!getData(buf))
+         return;
+
+      if (!getCmdData(buf, c_sid, c_endsid)) {
+         std::stringstream msg;
+         msg << "Wrong data from server. Could not authenticate";
+         _server_log.writeLog(msg.str().c_str());
+         disconnect();
+         return;
+      }
+
+      wrapCmd(buf, c_sid, c_endsid);
+      sendEncryptedData(buf);
+
+      genRandString(_authstr, _auth_len);
+
+      std::cout << "\nClient Authorization Str: " <<  _authstr << "\n";
+
+      // Send random string
+      buf.assign(_authstr.begin(), _authstr.end());
+      wrapCmd(buf, c_sid, c_endsid);
+      sendData(buf);
+
+      _status = s_ctxChall;
+
+   }
+
+}
+
+void TCPConn::stxChall() {
 
    // If data on the socket, should be our Auth string from our host server
    if (_connfd.hasData()) {
@@ -249,7 +329,42 @@ void TCPConn::waitForChall() {
          return;
       }
 
-      if()
+      std::vector<uint8_t> auth;
+      auth.assign(_authstr.begin(), _authstr.end());
+      if(auth != buf) {   
+         std::stringstream msg;
+         msg << "Challenge string incorrectly encrypted. Cannot authenticate.";
+         _server_log.writeLog(msg.str().c_str());
+         disconnect();
+         return;
+      }
+
+      std::cout << "Data correctly encrypted!";
+
+   _status = s_srxChall;
+
+   }
+}
+
+void TCPConn::srxChall() {
+   if (_connfd.hasData()) {
+      std::vector<uint8_t> buf;
+
+      if (!getData(buf))
+         return;
+
+      if (!getCmdData(buf, c_sid, c_endsid)) {
+         std::stringstream msg;
+         msg << "SID string from connecting client invalid format. Cannot authenticate.";
+         _server_log.writeLog(msg.str().c_str());
+         disconnect();
+         return;
+      }
+      
+      wrapCmd(buf, c_sid, c_endsid);
+      sendEncryptedData(buf);
+
+      _status = s_datarx;
    }
 }
 
@@ -280,30 +395,32 @@ void TCPConn::waitForSID() {
       std::string node(buf.begin(), buf.end());
       setNodeID(node.c_str());
 
-      // Send our Node ID
-      buf.assign(_svr_id.begin(), _svr_id.end());
-      wrapCmd(buf, c_sid, c_endsid);
-      sendData(buf);
+      // // Send our Node ID
+      // buf.assign(_svr_id.begin(), _svr_id.end());
+      // wrapCmd(buf, c_sid, c_endsid);
+      // sendData(buf);
 
 
       // Seed with a random value
-      std::random_device r;
+      // std::random_device r;
 
-      // Choose a random mean between 0 and 255 (byte constraints)
-      std::default_random_engine eng(r());
-      std::uniform_int_distribution<uint8_t> dist(0, 255);
-      for(unsigned int i = 0; i < _auth_len; _auth_len++) {
-         _authstr[i] = dist(eng);
-      }
+      // // Choose a random mean between 0 and 255 (byte constraints)
+      // std::default_random_engine eng(r());
+      // std::uniform_int_distribution<uint8_t> dist(0, 255);
+      // for(unsigned int i = 0; i < _auth_len; _auth_len++) {
+      //    _authstr[i] = dist(eng);
+      // }
 
-      std::cout << "\nAuthorization Str: " <<  _authstr << "\n";
+      genRandString(_authstr, _auth_len);
+
+      std::cout << "\nServer Authorization Str: " <<  _authstr << "\n";
 
       // Send random string
       buf.assign(_authstr.begin(), _authstr.end());
       wrapCmd(buf, c_sid, c_endsid);
       sendData(buf);
 
-      _status = s_chall;
+      _status = s_stxChall;
    }
 }
 

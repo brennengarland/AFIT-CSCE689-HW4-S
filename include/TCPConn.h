@@ -16,7 +16,7 @@ public:
    ~TCPConn();
 
    // The current status of the connection
-   enum statustype { s_none, s_connecting, s_connected, s_datatx, s_datarx, s_waitack, s_hasdata, s_chall };
+   enum statustype { s_none, s_connecting, s_connected, s_datatx, s_datarx, s_waitack, s_hasdata, s_stxChall, s_srxChall, s_ctxChall, s_crxChall };
 
    statustype getStatus() { return _status; };
 
@@ -72,7 +72,10 @@ protected:
    // Functions to execute various stages of a connection 
    void sendSID();
    void waitForSID();
-   void waitForChall();
+   void stxChall();
+   void srxChall();
+   void ctxChall();
+   void crxChall();
    void transmitData();
    void waitForData();
    void awaitAck();
