@@ -16,7 +16,8 @@ public:
    ~TCPConn();
 
    // The current status of the connection
-   enum statustype { s_none, s_connecting, s_connected, s_datatx, s_datarx, s_waitack, s_hasdata, s_stxChall, s_srxChall, s_ctxChall, s_crxChall };
+   enum statustype { s_none, s_connecting, s_connected, s_datatx, s_datarx, s_waitack, s_hasdata,
+    s_tx_svrChall, s_rx_svrChall, s_rx_cltResp, s_rx_cltChall, s_rx_svrResp };
 
    statustype getStatus() { return _status; };
 
@@ -72,13 +73,16 @@ protected:
    // Functions to execute various stages of a connection 
    void sendSID();
    void waitForSID();
-   void stxChall();
-   void srxChall();
-   void ctxChall();
-   void crxChall();
    void transmitData();
    void waitForData();
    void awaitAck();
+
+   // Authorization functions
+   void rx_svrChall();
+   void rx_cltResp();
+   void rx_cltChall();
+   void rx_svrResp();
+
 
    // Looks for commands in the data stream
    std::vector<uint8_t>::iterator findCmd(std::vector<uint8_t> &buf,
@@ -116,7 +120,6 @@ private:
 
    CryptoPP::SecByteBlock &_aes_key; // Read from a file, our shared key
    std::string _authstr;   // remembers the random authorization string sent
-   unsigned int _auth_len = 10;
 
    unsigned int _verbosity;
 
