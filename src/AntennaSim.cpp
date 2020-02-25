@@ -52,7 +52,7 @@ void AntennaSim::loadSourceDB(const char *filename) {
 }
 
 double AntennaSim::getAdjustedTime() {
-   return static_cast<time_t>(((double) time(NULL) - (double) _start_time) * _time_mult);
+   return static_cast<time_t>(time(NULL) - _start_time) * _time_mult;
 }
 
 /*****************************************************************************************
