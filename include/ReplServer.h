@@ -63,6 +63,10 @@ private:
    // Used to bind the server
    std::string _ip_addr;
    unsigned short _port;
+
+   std::list<DronePlot>::iterator data1, data2;
+   bool init = false;
+   
 };
 
 

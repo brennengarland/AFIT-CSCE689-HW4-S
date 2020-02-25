@@ -71,6 +71,7 @@ TCPConn::TCPConn(LogMgr &server_log, CryptoPP::SecByteBlock &key, unsigned int v
 
    c_endsid = c_sid;
    c_endsid.insert(c_endsid.begin()+1, 1, slash);
+
 }
 
 
@@ -244,9 +245,11 @@ void TCPConn::sendSID() {
    std::vector<uint8_t> buf(_svr_id.begin(), _svr_id.end());
    wrapCmd(buf, c_sid, c_endsid);
    sendData(buf);
-
+   // std::cout << "Server ID: " << _svr_id << "\n";
    _status = s_rx_svrChall; 
    // _status = s_datatx;
+
+   
 }
 
 /**********************************************************************************************
@@ -270,11 +273,11 @@ void TCPConn::rx_svrChall() {
          return;
       }
 
-      std::cout << "\nClient: Received Challenge: ";
-      for(auto & data : buf)
-         std::cout << data;
 
-      std::cout << "\n";
+      // std::cout << "\nClient: Received Challenge: ";
+      // for(auto & data : buf)
+      //    std::cout << data;
+      // std::cout << "\n";
 
       // Encrypt the random bytes and send them back
       wrapCmd(buf, c_auth, c_endauth);
@@ -282,7 +285,7 @@ void TCPConn::rx_svrChall() {
 
       // Send client challenge
       genRandString(_authstr, 10);
-      std::cout << "Client: Sending rand bytes: " << _authstr << "\n\n";
+      // std::cout << "Client: Sending rand bytes: " << _authstr << "\n\n";
       buf.clear();
       buf.assign(_authstr.begin(), _authstr.end());
       wrapCmd(buf, c_auth, c_endauth);
@@ -319,7 +322,7 @@ void TCPConn::waitForSID() {
       setNodeID(node.c_str());
 
       genRandString(_authstr, 10);
-      std::cout << "\nServer: Sending rand bytes: " << _authstr << "\n\n";
+      // std::cout << "\nServer: Sending rand bytes: " << _authstr << "\n\n";
       buf.clear();
       buf.assign(_authstr.begin(), _authstr.end());
       wrapCmd(buf, c_auth, c_endauth);
@@ -344,7 +347,6 @@ void TCPConn::rx_cltResp() {
          return;
 
       if (!getCmdData(buf, c_auth, c_endauth)) {
-         std::cout << "\n\tIncorrect Data format\n\n";
          std::stringstream msg;
          msg << "SID string from connecting client invalid format. Cannot authenticate.";
          _server_log.writeLog(msg.str().c_str());
@@ -354,17 +356,16 @@ void TCPConn::rx_cltResp() {
 
       std::vector<uint8_t> auth;
       auth.assign(_authstr.begin(), _authstr.end());
-      std::cout << "\nServer: Received client's encryption\n";
+      // std::cout << "\nServer: Received client's encryption\n";
       if(buf != auth) {
          std::stringstream msg;
          msg << "Challenge not recognized. Cannot authenticate.";
          _server_log.writeLog(msg.str().c_str());
          disconnect();
-         std::cout << "\n\tUNRECOGNIZED CHALLENGE\n\n";
          return;
       }
 
-      std::cout << "Client is authenticated\n";
+      // std::cout << "Client is authenticated\n";
 
       _status = s_rx_cltChall;
 
@@ -380,21 +381,21 @@ void TCPConn::rx_cltResp() {
 void TCPConn::rx_cltChall() {
    if (_connfd.hasData()) {
       std::vector<uint8_t> buf;
-      std::cout << "Checking for client's challenge...\n";
+      // std::cout << "Checking for client's challenge...\n";
       if (!getData(buf))
          return;
-      std::cout << "Client Rand bytes: ";
-      for(auto & data : buf)
-         std::cout << data;
-      std::cout << "\n";
       if (!getCmdData(buf, c_auth, c_endauth)) {
-         std::cout << "\n\tClient sent Incorrect Data format\n\n";
          std::stringstream msg;
          msg << "SID string from connecting client invalid format. Cannot authenticate.";
          _server_log.writeLog(msg.str().c_str());
          disconnect();
          return;
       }
+      
+      // std::cout << "Client Rand bytes: ";
+      // for(auto & data : buf)
+      //    std::cout << data;
+      // std::cout << "\n";
 
       wrapCmd(buf, c_auth, c_endauth);
       sendEncryptedData(buf);
@@ -424,7 +425,6 @@ void TCPConn::rx_svrResp() {
             return;
 
          if (!getCmdData(buf, c_auth, c_endauth)) {
-            std::cout << "\n\tServer Sent Incorrect Data format\n\n";
             std::stringstream msg;
             msg << "SID string from connecting client invalid format. Cannot authenticate.";
             _server_log.writeLog(msg.str().c_str());
@@ -434,17 +434,16 @@ void TCPConn::rx_svrResp() {
 
       std::vector<uint8_t> auth;
       auth.assign(_authstr.begin(), _authstr.end());
-      std::cout << "\nClient: Received servers's encryption\n";
+      // std::cout << "\nClient: Received servers's encryption\n";
       if(buf != auth) {
          std::stringstream msg;
          msg << "Challenge not recognized. Cannot authenticate.";
          _server_log.writeLog(msg.str().c_str());
          disconnect();
-         std::cout << "\n\tUNRECOGNIZED CHALLENGE\n\n";
          return;
       }
 
-      std::cout << "Server is authenticated\n";
+      // std::cout << "Server is authenticated\n";
 
       _status = s_datatx;
    }

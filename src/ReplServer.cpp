@@ -82,6 +82,9 @@ void ReplServer::replicate() {
    if (_verbosity >= 2)
       std::cout << "Server bound to " << _ip_addr << ", port: " << _port << " and listening\n";
 
+   int coordinator = 1;
+   std::vector<time_t> skew(4, 0);
+   std::vector<std::list<DronePlot>::iterator> del_data;
   
    // Replicate until we get the shutdown signal
    while (!_shutdown) {
@@ -106,10 +109,72 @@ void ReplServer::replicate() {
 
          // Incoming replication--add it to this server's local database
          addReplDronePlots(data);         
-      }       
+      }
+
+      _plotdb.sortByTime();
+      if(_plotdb.size() > 1) {
+         if(init == false) {
+            data1 = _plotdb.begin();
+            data2 = std::next(_plotdb.begin(), 1);
+            init = true;
+         }
+      
+         // Change ts for first datapoint
+         if(skew.at(data1->node_id) != 0 && !this->data1->isFlagSet(DBFLAG_FXD))
+            data1->timestamp = skew.at(data1->node_id) + data1->timestamp;
+            this->data1->setFlags(DBFLAG_FXD);
+         // std::cout << "\nStarting... " << "\n";
+         do {
+            // If the data points are the same location
+            if(data1->latitude == data2->latitude && data1->longitude == data2->longitude) {
+               // // If one of the nodes is a coordinator we can find a skew
+               // if(data1->node_id == coordinator && (data1->timestamp - data2->timestamp) != 0) {
+               //    skew.at(data2->node_id) = data1->timestamp - data2->timestamp;
+                  std::cout << "\n Same data!\n";
+               //    std::cout << "Data1: " << data1->timestamp << "\t Data2: " << data2->timestamp << "\n";
+               //    std::cout << "Skew for " << data2->node_id << " calculated: " << skew.at(data2->node_id) << "\n";
+               // } else if(data2->node_id == coordinator && skew.at(data1->node_id) != 0) {
+               //    skew.at(data1->node_id) = data2->timestamp - data1->timestamp;
+               //    std::cout << "\n Same data!\n";
+               //    std::cout << "Data1: " << data1->timestamp << "\t Data2: " << data2->timestamp << "\n";
+               //    std::cout << "Skew for " << data1->node_id << " calculated: " << skew.at(data1->node_id) << "\n";
+               // }
+               // Delete the data with the larger node id
+               if(data1->node_id > data2->node_id) {
+                  std::cout << "Pushing back data1\n";
+                  del_data.push_back(data1);
+               } else {
+                  std::cout << "Pushing back data2\n";
+                  del_data.push_back(data2);
+               }
+            //    // The points are not the same and the timestampe should change if 
+            //    // we know of a skew
+            } else if(skew.at(data2->node_id) != 0 && !this->data2->isFlagSet(DBFLAG_FXD)) {
+               data2->timestamp = skew.at(data2->node_id) + data2->timestamp;
+               this->data2->setFlags(DBFLAG_FXD);
+            }
+               // del_data = data1;
+               // data1 = data2;
+               // _plotdb.erase(del_data);
+               // std::cout << "\t Data deleted\n";
+               // data2 = std::next(data2);
+            // } else {
+            
+            data1 = data2;
+            data2 = std::next(data2, 1);
+
+            
+         } while(data2 != _plotdb.end());
+         for(auto data : del_data) {
+            std::cout << "Deleting data..\n";
+            _plotdb.erase(data);
+         }
+         del_data.clear();
+      }
 
       usleep(1000);
-   }   
+   }
+
 }
 
 /**********************************************************************************************

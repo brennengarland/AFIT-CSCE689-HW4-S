@@ -110,6 +110,7 @@ private:
  
    std::string _node_id; // The username this connection is associated with
    std::string _svr_id;  // The server ID that hosts this connection object
+   // std::string _coord_id = _svr_id; // The coordinator by which we set the time
 
    // Store incoming data to be read by the queue manager
    std::vector<uint8_t> _inputbuf;
