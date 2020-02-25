@@ -73,8 +73,8 @@ int main(int argc, char *argv[]) {
    // ****** Initialization variables ******
    // time_mult - speeds up the simulation by the multiplier (2.0 runs twice as fast)
    float time_mult = 1.0;
-   int verbosity = 0;
-   int sim_time = 800; // Default 800 seconds
+   unsigned int verbosity = 0;
+   int sim_time = 900; // Default 900 seconds
    std::string ip_addr = "127.0.0.1";
    unsigned short port = 9999;
 
@@ -122,8 +122,8 @@ int main(int argc, char *argv[]) {
 
       // Set the max number to count up to
       case 'v':
-         verbosity = (int) strtol(optarg, NULL, 10);
-         if ((verbosity <= 0) || (verbosity > 3)){
+         verbosity = (unsigned int) strtol(optarg, NULL, 10);
+         if (verbosity > 3){
             std::cerr << "Invalid verbosity. Range: 0-3 where 3 is max\n";
             exit(0);
          }
@@ -194,6 +194,7 @@ int main(int argc, char *argv[]) {
 
    // Write the replication database to a CSV file
    std::cout << "Writing results to: " << outfile << "\n";
+   db.sortByTime();
    db.writeCSVFile(outfile.c_str());
    
    return 0;

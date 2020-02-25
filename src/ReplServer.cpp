@@ -218,7 +218,9 @@ unsigned int ReplServer::queueNewPlots() {
    }
  
    // Add the count onto the front
-   std::cout << "Adding in count: " << count << "\n";
+   if (_verbosity >= 3)
+      std::cout << "Adding in count: " << count << "\n";
+
    uint8_t *ctptr_begin = (uint8_t *) &count;
    marshall_data.insert(marshall_data.begin(), ctptr_begin, ctptr_begin+sizeof(unsigned int));
 
