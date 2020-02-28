@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sys/time.h>
 #include "AntennaSim.h"
 #include "DronePlotDB.h"
 
@@ -17,6 +18,10 @@ AntennaSim::AntennaSim(DronePlotDB &dpdb, const char *source_filename, float tim
                                              _verbosity(verbosity),
                                              _start_time(0)
 {
+   pthread_mutex_init(&_offset_mutex, NULL);
+
+   pthread_mutex_lock(&_offset_mutex);
+
    if (_verbosity == 3)
       std::cout << "SIM: Loading source database: " << source_filename << "\n";
 
@@ -67,8 +72,14 @@ void AntennaSim::simulate() {
    _source_db.sortByTime();
 
    // Set up a random offset between 1 and 3 seconds from true
-   srand(time(NULL));
+   struct timeval tv;
+   gettimeofday(&tv, NULL);
+   srand(tv.tv_usec);
+
    _time_offset = (rand() % 6) - 3;
+
+   pthread_mutex_unlock(&_offset_mutex);
+
    if (_verbosity >= 2) 
       std::cout << "SIM: Simulator time offset: " << _time_offset << " secs\n";
 
@@ -83,7 +94,7 @@ void AntennaSim::simulate() {
    }
 
    // Initialize
-   _start_time = time(NULL);
+   _start_time = time(NULL) + _time_offset - 3;
 
    timespec sleeptime;
    std::list<DronePlot>::iterator diter;
@@ -145,4 +156,15 @@ void AntennaSim::simulate() {
    }
 
 
+}
+
+int AntennaSim::getOffset() {
+
+   // force other threads to wait to get offset until it has been set
+   pthread_mutex_lock(&_offset_mutex);
+   
+   int ret_offset = _time_offset;
+
+   pthread_mutex_unlock(&_offset_mutex);
+   return ret_offset;
 }
