@@ -128,26 +128,26 @@ void ReplServer::replicate() {
                // If one of the nodes is a coordinator we can find a skew
                if(data1->node_id == coordinator && skew.at(data1->node_id) == 0) {
                   skew.at(data2->node_id) = data1->timestamp - data2->timestamp;
-                  std::cout << "\n Same data!\n";
-                  std::cout << "Data1: " << data1->timestamp << "\t Data2: " << data2->timestamp << "\n";
-                  std::cout << "Skew for " << data2->node_id << " calculated: " << skew.at(data2->node_id) << "\n";
+                  // std::cout << "\n Same data!\n";
+                  // std::cout << "Data1: " << data1->timestamp << "\t Data2: " << data2->timestamp << "\n";
+                  // std::cout << "Skew for " << data2->node_id << " calculated: " << skew.at(data2->node_id) << "\n";
                } else if(data2->node_id == coordinator && skew.at(data1->node_id) == 0) {
                   skew.at(data1->node_id) = data2->timestamp - data1->timestamp;
-                  std::cout << "\n Same data!\n";
-                  std::cout << "Data1: " << data1->timestamp << "\t Data2: " << data2->timestamp << "\n";
-                  std::cout << "Skew for " << data1->node_id << " calculated: " << skew.at(data1->node_id) << "\n";
+                  // std::cout << "\n Same data!\n";
+                  // std::cout << "Data1: " << data1->timestamp << "\t Data2: " << data2->timestamp << "\n";
+                  // std::cout << "Skew for " << data1->node_id << " calculated: " << skew.at(data1->node_id) << "\n";
                }
                // Delete the data with the larger node id
                if(data1->node_id > data2->node_id) {
-                  std::cout << "Pushing back data1\n";
+                  // std::cout << "Pushing back data1\n";
                   del_data.push_back(data1);
                } else {
-                  std::cout << "Pushing back data2\n";
+                  // std::cout << "Pushing back data2\n";
                   del_data.push_back(data2);
                }
             // If that node_id is known to have a skew and this data has not yet been fixed, fix the skew
             } else if(skew.at(data2->node_id) != 0 && !data2->isFlagSet(DBFLAG_FXD)) {
-               std::cout << "Data for location lat=" << data2->latitude << " lon=" << data2->longitude << "at node: " << data2->node_id << "from " << data2->timestamp << " to " << skew.at(data2->node_id) << "\n";
+               // std::cout << "Data for location lat=" << data2->latitude << " lon=" << data2->longitude << "at node: " << data2->node_id << "from " << data2->timestamp << " to " << skew.at(data2->node_id) << "\n";
                data2->timestamp = skew.at(data2->node_id) + data2->timestamp;
                data2->setFlags(DBFLAG_FXD);
             }
@@ -159,7 +159,7 @@ void ReplServer::replicate() {
          } while(data2 != _plotdb.end());
 
          for(auto data : del_data) {
-            std::cout << "Deleting data..\n";
+            // std::cout << "Deleting data..\n";
             _plotdb.erase(data);
          }
          del_data.clear();
